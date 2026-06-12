@@ -88,7 +88,6 @@
         <div class="stat"><div class="num">96</div><div class="lbl">Tokens (12-frame rollout)</div></div>
         <div class="stat"><div class="num">280k h</div><div class="lbl">Driving data</div></div>
         <div class="stat"><div class="num">34 M</div><div class="lbl">Clips</div></div>
-        <!-- <div class="stat"><div class="num">82 ms</div><div class="lbl">Inference (RBD)</div></div> -->
         <div class="stat"><div class="num">7</div><div class="lbl">Surround cameras</div></div>
       </div>
 
@@ -506,14 +505,14 @@
               <th>Method</th>
               <th>Extra Tokens</th>
               <th>ADE Lat. ↓ / ADE Lon. @6s ↓</th>
-              <th>Inference (ms) ↓</th>
+              <th>Inference ↓</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Base</td><td>0</td><td>0.2399 / 1.2979</td><td class="best">75</td></tr>
-            <tr><td>Base + Image</td><td>3584</td><td>0.2003 / 1.2456</td><td>1652</td></tr>
-            <tr><td>Base + 3DGS</td><td>3072</td><td>0.1964 / 1.2247</td><td>1428</td></tr>
-            <tr><td>Base + Sketch (Ours)</td><td class="best">96</td><td class="best">0.1765 / 1.1849</td><td>82</td></tr>
+            <tr><td>Base</td><td>0</td><td>0.2399 / 1.2979</td><td class="best">1.0</td></tr>
+            <tr><td>Base + Image</td><td>3584</td><td>0.2003 / 1.2456</td><td>22.0</td></tr>
+            <tr><td>Base + 3DGS</td><td>3072</td><td>0.1964 / 1.2247</td><td>19.0</td></tr>
+            <tr><td>Base + Sketch (Ours)</td><td class="best">96</td><td class="best">0.1765 / 1.1849</td><td>1.1</td></tr>
           </tbody>
         </table>
       </div>
@@ -524,7 +523,7 @@
         <p>
           Single-step denoising at the final stage improves planning over the standard VLA baseline
           but yields a high FID of 67.30, indicating modality collapse. RBD reduces FID to 9.59 with
-          only 3 ms additional inference latency and achieves the best lateral and longitudinal ADE.
+          only 0.1x additional inference latency and achieves the best lateral and longitudinal ADE.
         </p>
       </div>
       <div class="tablewrap">
@@ -532,15 +531,15 @@
           <thead>
             <tr>
               <th>Method</th>
-              <th>Inference (ms) ↓</th>
+              <th>Inference ↓</th>
               <th>FID ↓</th>
               <th>ADE Lat. ↓ / ADE Lon. ↓</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Base</td><td class="best">75</td><td>—</td><td>0.2399 / 1.2979</td></tr>
-            <tr><td>Base + Sketch (Single Step)</td><td>79</td><td>67.30</td><td>0.1783 / 1.1938</td></tr>
-            <tr><td>Base + Sketch (RBD)</td><td>82</td><td class="best">9.59</td><td class="best">0.1765 / 1.1849</td></tr>
+            <tr><td>Base</td><td class="best">1.0</td><td>—</td><td>0.2399 / 1.2979</td></tr>
+            <tr><td>Base + Sketch (Single Step)</td><td>1.1</td><td>67.30</td><td>0.1783 / 1.1938</td></tr>
+            <tr><td>Base + Sketch (RBD)</td><td>1.1</td><td class="best">9.59</td><td class="best">0.1765 / 1.1849</td></tr>
           </tbody>
         </table>
       </div>
