@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X-Mind — Efficient Visual Chain-of-Thought via Predictive World Model for End-to-End Driving</title>
+  <meta name="description" content="X-Mind internalizes predictive world modeling as Visual Chain-of-Thought for low-latency, physics-grounded end-to-end driving." />
+  <meta property="og:title" content="X-Mind" />
+  <meta property="og:description" content="Visual CoT for end-to-end driving via abstract sketch and Recurrent Block Diffusion. PWM Team · XPeng Inc." />
+  <meta property="og:image" content="../assets/img/xmind_main.png" />
+  <link rel="icon" type="image/png" href="../assets/img/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+</head>
+<body>
+
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<nav class="nav">
+  <a class="brand" href="#top">
+    <img class="brand-full" src="../assets/img/full_logo.png" alt="XPENG" />
+  </a>
+  <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+  <ul class="sections">
+    <li><a href="#intro">Intro</a></li>
+    <li><a href="#data">Data</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#visualization">Visualization</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#paper">Paper</a></li>
+  </ul>
+</nav>
+
+<main id="top">
+
+  <header class="hero">
+    <h1>X-Mind: Efficient Visual Chain-of-Thought via Predictive World Model for End-to-End Driving</h1>
+    <div class="authors">PWM Team</div>
+    <div class="affil">
+      <img src="../assets/img/logo.png" alt="XPeng" /> XPeng Inc. · Technical Report · 2026
+    </div>
+    <div class="badges">
+      <a class="badge muted" href="#" data-cfg="ARXIV_URL" target="_blank" rel="noopener">arXiv</a>
+      <a class="badge" href="#visualization">Visualization</a>
+    </div>
+  </header>
+
+  <!-- ====================== 01 INTRO ====================== -->
+  <section id="intro" data-num="01">
+    <div class="container">
+      <div class="section-label">01 — Introduction</div>
+      <h2>Why Visual Chain-of-Thought for Driving?</h2>
+      <div class="abstract prose">
+        <p>
+          Predicting future states is the cornerstone of reasoning for autonomous physical agents.
+          Vision-Language-Action (VLA) models have driven remarkable progress in end-to-end driving,
+          yet they predominantly rely on direct perception-to-action mapping and lack explicit
+          predictive capability. Integrating Predictive World Models (PWMs) is a consensus path to
+          close this gap, but existing approaches either cascade PWMs — incurring prohibitive
+          on-vehicle latency — or append them as shallow terminal tasks, failing to instill
+          forward-looking reasoning into the deep backbone of large language models.
+        </p>
+        <p>
+          <strong>X-Mind</strong> internalizes PWMs as <em>Visual Chain-of-Thought (Visual CoT)</em>.
+          By enforcing a world rollout prior to action, the model imagines future evolution first,
+          yielding a policy robustly grounded in environmental dynamics and aware of the future
+          consequences its actions will unfold. Efficiency is tackled on two fronts: a compact
+          abstract sketch (BEV layout fused with driving priors) compressed to <strong>96 tokens</strong>
+          via a Deep Compression Autoencoder (DC-AE), and a <em>Recurrent Block Diffusion (RBD)</em>
+          scheme that folds iterative denoising into a single forward pass of the large drive model.
+        </p>
+      </div>
+
+      <figure>
+        <img src="../assets/img/xmind_main.png" alt="X-Mind overall architecture" />
+        <figcaption>
+          Overall architecture of X-Mind. The PWM is embedded within the large drive model.
+          Recurrent Block Diffusion executes progressive denoising across hierarchical internal layers
+          in a single forward pass to generate a compact abstract sketch. Conditioned on this
+          anticipated physical future, the planner derives the optimal ego vehicle trajectory.
+          Blue arrows denote training data flow; black arrows illustrate inference.
+        </figcaption>
+      </figure>
+
+      <div class="kv">
+        <div class="stat"><div class="num">96</div><div class="lbl">Tokens (12-frame rollout)</div></div>
+        <div class="stat"><div class="num">280k h</div><div class="lbl">Driving data</div></div>
+        <div class="stat"><div class="num">34 M</div><div class="lbl">Clips</div></div>
+        <div class="stat"><div class="num">82 ms</div><div class="lbl">Inference (RBD)</div></div>
+        <div class="stat"><div class="num">7</div><div class="lbl">Surround cameras</div></div>
+      </div>
+
+      <h3>Contributions</h3>
+      <ul class="bullets">
+        <li>
+          <strong>Predictive reasoning via Visual CoT.</strong> We frame physical reasoning as future
+          world prediction, integrating PWMs as an explicit Visual CoT that provides dense,
+          physics-grounded constraints for VLA models.
+        </li>
+        <li>
+          <strong>Efficient visual thinking representation.</strong> Inspired by biological mental
+          imagery, an abstract sketch fuses BEV layouts with navigation intents and traffic rules.
+          DC-AE compresses a 12-frame future rollout to 96 tokens, resolving the long-context
+          bottleneck of instantiating Visual CoT via PWMs.
+        </li>
+        <li>
+          <strong>Recurrent block diffusion.</strong> An internalized generative mechanism unfolds
+          denoising steps across LLM layers, achieving extremely fast single-forward-pass future
+          generation suitable for real-time inverse dynamics planning.
+        </li>
+        <li>
+          <strong>Large-scale validation.</strong> Validated on hundreds of millions of real-world
+          driving frames, the framework exhibits strong scalability on complex long-tail interactive
+          scenarios with stable system-level performance.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ====================== 02 DATA ====================== -->
+  <section id="data" class="alt" data-num="02">
+    <div class="container">
+      <div class="section-label">02 — Data</div>
+      <h2>Industry-Scale Multi-Camera Driving</h2>
+      <div class="prose">
+        <p>
+          We validate X-Mind on a large-scale internal autonomous driving dataset collected from
+          diverse real-world scenarios — approximately <strong>280,000 hours</strong> of continuous
+          driving records, segmented into <strong>34 million</strong> video clips. Following the
+          hardware configuration established in X-World, sensory input comprises multi-view images
+          from seven onboard cameras (front fisheye, front narrow, left front, right front, left rear,
+          right rear, and rear), providing full 360° coverage.
+        </p>
+        <p>
+          We adopt the same data processing protocol as X-Foresight. Visual inputs are tokenized
+          into a corpus of <strong>13.8 T tokens</strong> for large drive model training, with the
+          dataset distribution spanning approximately <strong>86.8% urban</strong> and
+          <strong>13.2% highway</strong> driving conditions. All experiments in this report use a
+          subset comprising one eighth of the total dataset.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 03 ARCHITECTURE ====================== -->
+  <section id="architecture" data-num="03">
+    <div class="container">
+      <div class="section-label">03 — Architecture</div>
+      <h2>PWM as Visual CoT Internalized in the Large Drive Model</h2>
+      <div class="prose">
+        <p>
+          X-Mind shifts from reactive perception-to-action mapping to <strong>predictive cognitive
+          reasoning</strong>. By internalizing a PWM within the large drive model, we instantiate
+          Visual CoT — an explicit spatiotemporal rollout prior to action generation that provides
+          dense, physics-grounded constraints for deep network features.
+        </p>
+        <p>
+          Two key designs align with the generative data flow. First, heterogeneous inputs are encoded
+          into an efficient visual thinking representation: rather than predicting dense future images,
+          the model forecasts a compact <strong>abstract sketch</strong> that aggregates road
+          topologies, dynamic agents, traffic light states, navigation intents, and velocity
+          compliance profiles. DC-AE compresses a 12-frame rollout to <strong>96 tokens</strong>.
+          Second, <strong>Recurrent Block Diffusion (RBD)</strong> unrolls progressive denoising
+          steps across hierarchical LLM layers, predicting the anticipated physical future in a
+          single forward pass before an inverse dynamics planner derives the ego trajectory.
+        </p>
+      </div>
+
+      <div class="cols2">
+        <div class="card">
+          <h3>Visual CoT (World Model)</h3>
+          <p>
+            Layer Flow Matching distributes denoising across internal LLM depths. Sketch tokens are
+            re-injected at designated layers with progressively decreasing noise, allowing perception
+            and trajectory tokens to attend to a clarifying physical future in latent space.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Inverse Dynamics Planner</h3>
+          <p>
+            Conditioned on the internalized spatial and temporal rollout, a dedicated planner head
+            derives the optimal ego trajectory. Kinematic planning loss supervises longitudinal
+            acceleration and yaw rate directly, ensuring physically executable, non-holonomically
+            feasible trajectories.
+          </p>
+        </div>
+      </div>
+
+      <h3>Abstract Sketch as Mental Canvas</h3>
+      <div class="prose">
+        <p>
+          Select a view below: the abstract sketch mental canvas, or the structured ground-truth
+          labels used to supervise world model training.
+        </p>
+      </div>
+
+      <div class="demo-picker panel-picker" role="tablist" aria-label="Sketch views">
+        <button type="button" class="active" data-panel="sketch-panel-abstract" aria-selected="true">Abstract Sketch</button>
+        <button type="button" data-panel="sketch-panel-gt" aria-selected="false">Structured GT Labels</button>
+      </div>
+
+      <div id="sketch-panel-abstract" class="sketch-panel">
+        <figure class="fig-sketch">
+          <img src="../assets/img/abstract_sketch.png" alt="Abstract sketch for visual thinking" />
+          <figcaption>
+            The abstract sketch aggregates physical scene elements (dynamic agents and static topologies
+            in BEV) with driving priors: traffic light states (top left), adaptive navigation paths
+            (cyan regions), and velocity compliance profiles (bottom left speed bar with green/white/red
+            segments for actual speed, margin to limit, and exceedance).
+          </figcaption>
+        </figure>
+      </div>
+
+      <div id="sketch-panel-gt" class="sketch-panel" hidden>
+        <div class="gt-carousel" id="sketch-gt-carousel" aria-roledescription="carousel">
+          <button type="button" class="gt-carousel-btn gt-carousel-prev" aria-label="Previous GT label">←</button>
+
+          <div class="gt-carousel-viewport">
+            <div class="gt-carousel-slide active" data-slide="0">
+              <figure class="fig-sketch fig-sketch-carousel">
+                <img src="../assets/img/sketch_gt_1.png" alt="Traffic light transition GT (Fig. 5a)" />
+                <figcaption><strong>(a)</strong> Traffic light transition GT (t = 0 s vs. t = 1 s)</figcaption>
+              </figure>
+              <div class="prose gt-carousel-desc">
+                <p>
+                  The GT sequences explicitly incorporate traffic light states into the spatial grid
+                  to supervise the model's temporal reasoning. In this intersection scenario, the GT
+                  data captures the precise transition from a stationary phase
+                  (<em>t</em> = 0 s, Stopped) to a dynamic proceeding phase
+                  (<em>t</em> = 1 s, Proceeding) following a signal change. By providing such dense
+                  supervision, the framework ensures that the world model learns the causal
+                  relationship between signal phases and vehicle start-stop mechanics.
+                </p>
+              </div>
+            </div>
+
+            <div class="gt-carousel-slide" data-slide="1" hidden>
+              <figure class="fig-sketch fig-sketch-carousel">
+                <img src="../assets/img/sketch_gt_2.png" alt="Adaptive navigation target path GT (Fig. 5b)" />
+                <figcaption><strong>(b)</strong> Adaptive navigation target path GT (t = 0 s vs. t = 1 s)</figcaption>
+              </figure>
+              <div class="prose gt-carousel-desc">
+                <p>
+                  To ground the model's future rollouts in high-level routing intents, the GT data
+                  embeds macro-navigation targets directly into the topological space. The
+                  visualization of the progressive GT sequence reveals how the designated cyan
+                  routing corridor and navigation arrows update adaptively as the ego-vehicle
+                  advances. This structured guidance serves as a deterministic spatial constraint,
+                  ensuring the model's latent imagination remains strictly aligned with the intended
+                  target path.
+                </p>
+              </div>
+            </div>
+
+            <div class="gt-carousel-slide" data-slide="2" hidden>
+              <figure class="fig-sketch fig-sketch-carousel">
+                <img src="../assets/img/sketch_gt_3.png" alt="Velocity compliance profile GT (Fig. 5c)" />
+                <figcaption><strong>(c)</strong> Velocity compliance profile GT (under-speed vs. over-speed)</figcaption>
+              </figure>
+              <div class="prose gt-carousel-desc">
+                <p>
+                  The GT data also provides explicit supervision for speed limit semantics and
+                  kinematic states. By comparing the abstract sketch labels across different velocity
+                  profiles, the supervision distinctly differentiates between compliant and excessive
+                  speed conditions. This kinematic status is visually quantified by a speed bar
+                  located at the bottom left of the sketch. Within this structured bar, a
+                  <strong>green</strong> segment represents the actual vehicle speed, a
+                  <strong>white</strong> segment indicates the remaining margin before reaching the
+                  speed limit, and a <strong>red</strong> segment explicitly highlights the extent of
+                  any velocity exceedance. By coupling the physical environment with these legal
+                  kinematic thresholds, the labels compel the predictive world model to accurately
+                  distinguish between safe and noncompliant future states during its continuous
+                  spatial rollout.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="gt-carousel-btn gt-carousel-next" aria-label="Next GT label">→</button>
+        </div>
+
+        <figcaption class="sketch-gt-summary">
+          Visualization of the structured sketch GT data. These labels represent the high-fidelity
+          supervision signals used to train the world model, incorporating traffic light signal phases,
+          macroscopic routing intents, and explicit kinematic compliance bars. Such dense and structured
+          labels are crucial for the model to internalize complex physical and semantic driving rules.
+        </figcaption>
+      </div>
+
+      <h3>Recurrent Block Diffusion</h3>
+      <figure class="fig-rbd">
+        <img src="../assets/img/rbd_overview.png" alt="Recurrent Block Diffusion overview" />
+        <figcaption>
+          Overview of Recurrent Block Diffusion. Transformer layers are divided into blocks; during
+          training, sketch token features at each block are replaced with linear combinations of
+          noise and ground truth. During inference, outputs of preceding blocks feed subsequent blocks
+          via Euler integration with a fixed time step — all within one LLM forward pass.
+        </figcaption>
+      </figure>
+
+      <h3>End-to-End Joint Optimization</h3>
+      <div class="prose">
+        <p>
+          The framework is jointly optimized with a weighted sum of world model rollout loss
+          (<code>L<sub>WM</sub></code>) and kinematic planning loss (<code>L<sub>plan</sub></code>):
+          <code>L<sub>total</sub> = λ<sub>WM</sub>L<sub>WM</sub> + λ<sub>plan</sub>L<sub>plan</sub></code>.
+          World model supervision combines layer-wise latent flow matching with sparse image-space
+          reconstruction (MSE + LPIPS on decoded sketches). This unified objective provides dense,
+          physics-grounded constraints for the LLM backbone and avoids shortcut learning on sparse
+          ground-truth trajectories alone.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== 04 VISUALIZATION ====================== -->
+  <section id="visualization" class="alt" data-num="04">
+    <div class="container">
+      <div class="section-label">04 — Visualization</div>
+      <h2>World Model vs. VLA Baseline</h2>
+      <div class="prose">
+        <p>
+          The clips below compare planning behavior across five driving scenarios. Each example
+          shows <strong>Ground Truth</strong>, <strong>w/o World Model</strong> (VLA), and
+          <strong>w World Model</strong> (X-Mind) side by side within the video.
+        </p>
+      </div>
+
+      <div class="demo-picker panel-picker scenario-picker" role="tablist" aria-label="Driving scenarios">
+        <button type="button" class="active" data-panel="viz-safety" aria-selected="true">Safety</button>
+        <button type="button" data-panel="viz-navigation" aria-selected="false">Navigation</button>
+        <button type="button" data-panel="viz-obstacle" aria-selected="false">Obstacle Avoidance</button>
+        <button type="button" data-panel="viz-traffic-light" aria-selected="false">Traffic Light</button>
+        <button type="button" data-panel="viz-laneselect" aria-selected="false">Lane Selection</button>
+      </div>
+
+      <ul class="viz-legend" aria-label="Trajectory legend">
+        <li class="legend-gt">Ground Truth</li>
+        <li class="legend-wo">w/o World Model</li>
+        <li class="legend-wm">w/ World Model</li>
+      </ul>
+
+      <div id="viz-safety" class="viz-scenario-panel">
+        <div class="demo-duo">
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/Safety_1.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 1</div>
+          </div>
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/Safety_2.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="viz-navigation" class="viz-scenario-panel" hidden>
+        <div class="demo-duo">
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/navigation_1.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 1</div>
+          </div>
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/Navigation_2.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="viz-obstacle" class="viz-scenario-panel" hidden>
+        <div class="demo-duo">
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/obstacle_1.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 1</div>
+          </div>
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/obstacle_2.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="viz-traffic-light" class="viz-scenario-panel" hidden>
+        <div class="demo-duo">
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/light_1.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 1</div>
+          </div>
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/light_2.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 2</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="viz-laneselect" class="viz-scenario-panel" hidden>
+        <div class="demo-duo">
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/LaneSelect_1.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 1</div>
+          </div>
+          <div class="demo-duo-item">
+            <div class="demo-player">
+              <video controls preload="metadata" playsinline>
+                <source src="../assets/videos/LaneSelect_2.mp4#t=0.1" type="video/mp4" />
+              </video>
+            </div>
+            <div class="demo-duo-label">Example 2</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Future Sketch Rollout (RBD vs. Single-Step)</h3>
+      <div class="prose">
+        <p>
+          Compared to a single-step denoising baseline that frequently produces blurred or fading
+          semantic layouts, RBD generates persistently sharp and temporally coherent abstract sketches.
+          The model can infer continuous motion of dynamic agents even when they are missing or
+          heavily occluded in ground truth annotations.
+        </p>
+      </div>
+      <figure>
+        <img src="../assets/img/sketch_rollout_qual.png" alt="Qualitative sketch rollout comparison" />
+        <figcaption>
+          Spatial rollout across daytime and nighttime scenarios. RBD (bottom) produces strictly
+          accurate, temporally coherent predictions compared to the single-step baseline (middle),
+          including forecasting motion of agents absent from ground truth supervision.
+        </figcaption>
+      </figure>
+
+      <!-- <h3>Trajectory planning comparison</h3>
+      <div class="prose">
+        <p>
+          Qualitative trajectory comparisons across safety-critical braking, off-ramp navigation,
+          traffic-light compliance, and topological obstacle avoidance. The world model enhances
+          safety, navigation adherence, and semantic understanding in complex urban environments.
+        </p>
+      </div>
+      <figure>
+        <img src="../assets/img/trajectory_qual.png" alt="Qualitative trajectory comparison" />
+        <figcaption>
+          Driving trajectory comparison: ground truth, without world model, and with world model.
+          Layout: top row shows four-view cameras; bottom-left shows GT BEV; bottom-right shows
+          WM-predicted BEV. X-Mind with RBD demonstrates progressive planning across diverse scenarios.
+        </figcaption>
+      </figure> -->
+    </div>
+  </section>
+
+  <!-- ====================== 05 RESULTS ====================== -->
+  <section id="results" data-num="05">
+    <div class="container">
+      <div class="section-label">05 — Results</div>
+      <h2>Quantitative Evaluation and Ablations</h2>
+
+      <h3>Impact of Scene Representations</h3>
+      <div class="prose">
+        <p>
+          We compare raw image features, 3D Gaussian Splatting (3DGS), and our abstract sketch under
+          identical backbones. The sketch achieves the best Average Displacement Error (ADE) while
+          requiring only 96 extra tokens — an extreme reduction versus dense image (3584 tokens) or
+          3DGS (3072 tokens) baselines.
+        </p>
+      </div>
+      <div class="tablewrap">
+        <table class="results">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Extra Tokens</th>
+              <th>ADE Lat. ↓ / ADE Lon. @6s ↓</th>
+              <th>Inference (ms) ↓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Base</td><td>0</td><td>0.2399 / 1.2979</td><td class="best">75</td></tr>
+            <tr><td>Base + Image</td><td>3584</td><td>0.2003 / 1.2456</td><td>1652</td></tr>
+            <tr><td>Base + 3DGS</td><td>3072</td><td>0.1964 / 1.2247</td><td>1428</td></tr>
+            <tr><td>Base + Sketch (Ours)</td><td class="best">96</td><td class="best">0.1765 / 1.1849</td><td>82</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption>Performance and efficiency comparison of different scene representations. Lower is better.</figcaption>
+
+      <h3>Comparison of Diffusion Architectures</h3>
+      <div class="prose">
+        <p>
+          Single-step denoising at the final stage improves planning over the standard VLA baseline
+          but yields a high FID of 67.30, indicating modality collapse. RBD reduces FID to 9.59 with
+          only 3 ms additional inference latency and achieves the best lateral and longitudinal ADE.
+        </p>
+      </div>
+      <div class="tablewrap">
+        <table class="results">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Inference (ms) ↓</th>
+              <th>FID ↓</th>
+              <th>ADE Lat. ↓ / ADE Lon. ↓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Base</td><td class="best">75</td><td>—</td><td>0.2399 / 1.2979</td></tr>
+            <tr><td>Base + Sketch (Single Step)</td><td>79</td><td>67.30</td><td>0.1783 / 1.1938</td></tr>
+            <tr><td>Base + Sketch (RBD)</td><td>82</td><td class="best">9.59</td><td class="best">0.1765 / 1.1849</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption>Comparison across VLA baseline, single-step denoising, and Recurrent Block Diffusion.</figcaption>
+
+      <h3>Reconstruction vs. Future Generation</h3>
+      <div class="prose">
+        <p>
+          Current-frame sketch reconstruction achieves the best FID but the weakest trajectory
+          performance. Predicting 12 future frames achieves the best ADE despite a moderately higher
+          FID — confirming that the core advantage derives from predictive generative rollout, not
+          visually faithful reconstruction of present observations.
+        </p>
+      </div>
+      <div class="tablewrap">
+        <table class="results">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Sketch Target</th>
+              <th>FID ↓</th>
+              <th>ADE Lat. ↓ / ADE Lon. ↓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Base + Sketch (RBD)</td><td>Current frame</td><td class="best">8.97</td><td>0.1866 / 1.2132</td></tr>
+            <tr><td>Base + Sketch (RBD)</td><td>Future 1 frame</td><td>9.05</td><td>0.1840 / 1.2124</td></tr>
+            <tr><td>Base + Sketch (RBD)</td><td>Future 12 frames</td><td>9.59</td><td class="best">0.1765 / 1.1849</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption>Ablation on temporal prediction targets under the RBD framework.</figcaption>
+
+    </div>
+  </section>
+
+  <!-- ====================== 06 PAPER ====================== -->
+  <section id="paper" class="alt" data-num="06">
+    <div class="container">
+      <div class="section-label">06 — Tech Report</div>
+      <h2>Paper, Citation, Contributors</h2>
+      <div class="prose">
+        <p>
+          The technical report is available as
+          <a href="../X_Mind_Report.pdf" target="_blank" rel="noopener">PDF</a>.
+          If X-Mind informs your research, please cite us:
+        </p>
+      </div>
+
+      <div class="bibtex-wrap">
+        <button class="bibtex-copy" type="button">Copy</button>
+        <pre class="bibtex">@techreport{xmind2026,
+  title  = {X-Mind: Efficient Visual Chain-of-Thought via Predictive World Model for End-to-End Driving},
+  author = {{PWM Team}},
+  year   = {2026},
+  institution = {XPeng Inc.}
+}</pre>
+      </div>
+
+      <h3>Future Work</h3>
+      <div class="prose">
+        <p>
+          Two primary directions remain. First, joint sampling of control actions and intermediate
+          abstract sketch representations during inference — evaluating kinematic feasibility and
+          environmental interactions simultaneously during internal denoising steps. Second,
+          integrating self-supervised representation learning to forecast future states from
+          unannotated sensory inputs, easing continuous scaling beyond structured GT annotations.
+        </p>
+      </div>
+
+      <h3>Contributors</h3>
+      <dl class="contributors">
+        <dt>Advisors</dt>
+        <dd>Yu Zhang, Hang Zhang, Xianming Liu</dd>
+        <dt>Project Lead</dt>
+        <dd>Qingyu Luo, Zhuangzhuang Ding</dd>
+        <dt>Contributors</dt>
+        <dd>
+          Bohao Zhao*, Chengrui Wei*, Guangfeng Jiang*‡, Ruixin Liu*, Xuejie Lv*, Liu Liang,
+          Sutao Deng, Xiuyang Fan, Pengkun Zheng, Jinyun Zhou, Rui Guo, Hanpeng Liu,
+          Yutong Zheng, Yi Guo, Xinlong Zheng
+        </dd>
+        <dt>Technical Program Manager</dt>
+        <dd>Tenglong (Victor) Gu</dd>
+      </dl>
+      <p class="prose" style="font-size:15px;color:var(--muted);">
+        *Core contribution. The first five authors are listed in alphabetical order.
+        ‡Research Intern at XPENG.
+      </p>
+
+      <div class="acknowledgments">
+        We extend our sincere gratitude to the entire team for their dedication and hard work.
+        This project is a testament to our collective effort in pushing the boundaries of world
+        model research and engineering.
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="../assets/img/logo.png" alt="" />
+  PWM Team · XPeng Inc. · Technical Report · <span id="footer-year">2026</span>
+</footer>
+
+<script src="../config.js"></script>
+<script src="../assets/js/main.js"></script>
+</body>
+</html>
